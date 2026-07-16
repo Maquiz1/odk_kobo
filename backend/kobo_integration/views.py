@@ -215,8 +215,8 @@ def kobo_sync(request, project_id):
         if not api_url.endswith('/'):
             api_url += '/'
 
-        # Construct final Kobo submissions endpoint
-        submissions_url = f"{api_url}assets/{project.kobo_asset_id}/submissions/?format=json"
+        # Construct final Kobo submissions endpoint (uses /data/ in modern Kobo API v2)
+        submissions_url = f"{api_url}assets/{project.kobo_asset_id}/data/?format=json"
         headers = {'Authorization': f'Token {api_token}'}
 
         try:
