@@ -1,0 +1,26 @@
+<nav id="sidebar">
+    <div class="p-4 border-bottom border-secondary text-center">
+        <h5 class="mb-0 text-white"><i class="bi bi-box-seam me-2"></i>ODK System</h5>
+    </div>
+    <ul class="list-unstyled mt-3">
+        <li>
+            <a href="{% url 'record_list' %}" class="{% if request.resolver_match.url_name == 'record_list' %}active{% endif %}">
+                <i class="bi bi-card-list me-2"></i> Kobo Records
+            </a>
+        </li>
+        {% if request.user.is_superuser or request.user.groups.all|length > 0 and 'Admin' in request.user.groups.values_list %}
+        <li>
+            <a href="{% url 'project_list' %}" class="{% if 'project' in request.resolver_match.url_name %}active{% endif %}">
+                <i class="bi bi-folder-fill me-2"></i> Projects
+            </a>
+        </li>
+        {% endif %}
+        {% if perms.accounts.view_customuser %}
+        <li>
+            <a href="{% url 'user_list' %}" class="{% if 'user' in request.resolver_match.url_name %}active{% endif %}">
+                <i class="bi bi-people me-2"></i> User Management
+            </a>
+        </li>
+        {% endif %}
+    </ul>
+</nav>

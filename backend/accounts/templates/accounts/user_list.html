@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+{% load django_bootstrap5 %}
+
+{% block title %}User Management{% endblock %}
+{% block breadcrumb %}User Management{% endblock %}
+{% block page_header %}User Management{% endblock %}
+
+{% block content %}
+<div class="card shadow-sm">
+    <div class="card-header d-flex justify-content-between align-items-center bg-white py-3">
+        <h5 class="mb-0"><i class="bi bi-people-fill me-2 text-primary"></i>All System Users</h5>
+        {% if perms.accounts.add_customuser %}
+        <a href="{% url 'user_create' %}" class="btn btn-primary btn-sm">
+            <i class="bi bi-person-plus-fill me-1"></i> Add New User
+        </a>
+        {% endif %}
+    </div>
+    <div class="card-body p-0">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th class="ps-4">#</th>
+                    <th>Username</th>
+                    <th>Email</th>
+                    <th>Roles</th>
+                    <th>Status</th>
+                    <th>Joined</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr>
+                    <td class="ps-4 text-muted">{{ forloop.counter }}</td>
+                    <td class="fw-semibold">{{ user.username }}</td>
+                    <td>{{ user.email|default:"—" }}</td>
+                    <td>
+                        {% for group in user.groups.all %}
+                            <span class="badge bg-primary me-1">{{ group.name }}</span>
+                        {% empty %}
+                            <span class="text-muted fst-italic">No roles</span>
+                        {% endfor %}
+                        {% if user.is_superuser %}
+                            <span class="badge bg-danger">Super Admin</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if user.is_active %}
+                            <span class="badge bg-success">Active</span>
+                        {% else %}
+                            <span class="badge bg-danger">Inactive</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-muted small">{{ user.date_joined|date:"d M Y" }}</td>
+                    <td>
+                        {% if perms.accounts.change_customuser %}
+                        <a href="{% url 'user_update' user.pk %}" class="btn btn-sm btn-outline-secondary">
+                            <i class="bi bi-pencil-fill"></i>
+                        </a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="text-center py-5 text-muted">
+                        <i class="bi bi-inbox display-6 d-block mb-2"></i>No users found.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

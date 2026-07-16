@@ -1,0 +1,9 @@
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="h3 mb-0 text-gray-800">{% block page_header %}{{ title|default:"Dashboard" }}{% endblock %}</h2>
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a href="#">Home</a></li>
+            <li class="breadcrumb-item active" aria-current="page">{% block breadcrumb %}Overview{% endblock %}</li>
+        </ol>
+    </nav>
+</div>

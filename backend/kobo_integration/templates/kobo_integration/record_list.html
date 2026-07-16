@@ -1,0 +1,93 @@
+{% extends 'base.html' %}
+
+{% block title %}Kobo Records{% endblock %}
+{% block breadcrumb %}Kobo Records{% endblock %}
+{% block page_header %}Kobo Records{% endblock %}
+
+{% block content %}
+<div class="card shadow-sm">
+    <div class="card-header bg-white py-3">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <h5 class="mb-0"><i class="bi bi-card-list me-2 text-primary"></i>All Submissions</h5>
+            </div>
+            <div class="col-md-6">
+                <div class="d-flex gap-2 justify-content-md-end">
+                    <!-- Search form -->
+                    <form method="get" class="d-flex">
+                        <input type="search" name="q" value="{{ query }}" class="form-control form-control-sm" placeholder="Search by ID or submitter…">
+                        <button type="submit" class="btn btn-sm btn-outline-secondary ms-1">
+                            <i class="bi bi-search"></i>
+                        </button>
+                    </form>
+                    {% if perms.kobo_integration.add_record %}
+                    <a href="{% url 'record_create' %}" class="btn btn-sm btn-primary">
+                        <i class="bi bi-plus-circle-fill me-1"></i> Add Record
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th class="ps-4">#</th>
+                    <th>Kobo ID</th>
+                    <th>UUID</th>
+                    <th>Submitted By</th>
+                    <th>Created</th>
+                    <th>Last Updated</th>
+                    {% if perms.kobo_integration.change_record or perms.kobo_integration.delete_record %}
+                    <th>Actions</th>
+                    {% endif %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in records %}
+                <tr>
+                    <td class="ps-4 text-muted">{{ forloop.counter }}</td>
+                    <td class="fw-semibold">{{ record.kobo_id }}</td>
+                    <td class="text-muted small font-monospace">{{ record.uuid|default:"—" }}</td>
+                    <td>{{ record.submitted_by|default:"—" }}</td>
+                    <td class="text-muted small">{{ record.created_at|date:"d M Y, H:i" }}</td>
+                    <td class="text-muted small">{{ record.updated_at|date:"d M Y, H:i" }}</td>
+                    {% if perms.kobo_integration.change_record or perms.kobo_integration.delete_record %}
+                    <td>
+                        <div class="d-flex gap-1">
+                            {% if perms.kobo_integration.change_record %}
+                            <a href="{% url 'record_update' record.pk %}" class="btn btn-sm btn-outline-primary" title="Edit">
+                                <i class="bi bi-pencil-fill"></i>
+                            </a>
+                            {% endif %}
+                            {% if perms.kobo_integration.delete_record %}
+                            <a href="{% url 'record_delete' record.pk %}" class="btn btn-sm btn-outline-danger" title="Delete">
+                                <i class="bi bi-trash-fill"></i>
+                            </a>
+                            {% endif %}
+                        </div>
+                    </td>
+                    {% endif %}
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="text-center py-5 text-muted">
+                        <i class="bi bi-inbox display-6 d-block mb-2"></i>
+                        No records found.
+                        {% if perms.kobo_integration.add_record %}
+                        <br><a href="{% url 'record_create' %}" class="btn btn-sm btn-primary mt-3">Add First Record</a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if records %}
+    <div class="card-footer text-muted small bg-white">
+        Showing {{ records|length }} record{{ records|length|pluralize }}.
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

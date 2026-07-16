@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+
+{% block title %}Projects{% endblock %}
+{% block breadcrumb %}Projects{% endblock %}
+{% block page_header %}Projects{% endblock %}
+
+{% block content %}
+<div class="card shadow-sm">
+    <div class="card-header d-flex justify-content-between align-items-center bg-white py-3">
+        <h5 class="mb-0"><i class="bi bi-folder-fill me-2 text-warning"></i>All Projects</h5>
+        <a href="{% url 'project_create' %}" class="btn btn-sm btn-primary">
+            <i class="bi bi-folder-plus me-1"></i> Add Project
+        </a>
+    </div>
+    <div class="card-body p-0">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th class="ps-4">#</th>
+                    <th>Project Name</th>
+                    <th>Kobo Asset ID</th>
+                    <th>Members</th>
+                    <th>Records</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for project in projects %}
+                <tr>
+                    <td class="ps-4 text-muted">{{ forloop.counter }}</td>
+                    <td>
+                        <div class="fw-semibold">{{ project.name }}</div>
+                        {% if project.description %}
+                        <small class="text-muted">{{ project.description|truncatechars:60 }}</small>
+                        {% endif %}
+                    </td>
+                    <td class="font-monospace small text-muted">{{ project.kobo_asset_id|default:"—" }}</td>
+                    <td>
+                        <span class="badge bg-secondary">{{ project.members.count }} user{{ project.members.count|pluralize }}</span>
+                    </td>
+                    <td>
+                        <span class="badge bg-info text-dark">{{ project.records.count }} record{{ project.records.count|pluralize }}</span>
+                    </td>
+                    <td>
+                        {% if project.is_active %}
+                        <span class="badge bg-success">Active</span>
+                        {% else %}
+                        <span class="badge bg-secondary">Inactive</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="d-flex gap-1">
+                            <a href="{% url 'project_update' project.pk %}" class="btn btn-sm btn-outline-primary" title="Edit">
+                                <i class="bi bi-pencil-fill"></i>
+                            </a>
+                            <a href="{% url 'project_delete' project.pk %}" class="btn btn-sm btn-outline-danger" title="Delete">
+                                <i class="bi bi-trash-fill"></i>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="text-center py-5 text-muted">
+                        <i class="bi bi-folder display-6 d-block mb-2"></i>
+                        No projects yet.
+                        <br><a href="{% url 'project_create' %}" class="btn btn-sm btn-primary mt-3">Create First Project</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
