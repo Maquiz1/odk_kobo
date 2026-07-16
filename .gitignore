@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+venv-odk/
+venv/
+*.egg-info/
+
+# Django
+*.sqlite3
+backend/staticfiles/
+backend/media/
+
+# Environment — NEVER commit secrets
+.env
+backend/.env
+backend/.env.prod
+
+# Docker certs
+nginx/certs/
+
+# Editor
+.vscode/
+.idea/
+*.swp
