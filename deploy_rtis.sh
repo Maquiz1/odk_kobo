@@ -5,6 +5,9 @@ set -e
 
 echo "🚀 Starting Deployment for RTIS..."
 
+# Move to the directory where the script is located
+cd "$(dirname "$0")"
+
 # 1. Pull latest changes from git
 echo "📥 Pulling latest changes from Git (develop branch)..."
 git pull origin develop
