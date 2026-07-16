@@ -31,15 +31,7 @@ services:
         condition: service_healthy
     ports:
       - "8001:8000"    # reachable via VPS IP from the nginx container
-    command: >
-      sh -c "python manage.py migrate --noinput &&
-             python manage.py setup_roles &&
-             gunicorn config.wsgi:application
-               --bind 0.0.0.0:8000
-               --workers 3
-               --timeout 120
-               --access-logfile -
-               --error-logfile -"
+    command: sh -c "python manage.py migrate --noinput && python manage.py setup_roles && gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3 --timeout 120 --access-logfile - --error-logfile -"
 
 volumes:
   postgres_data:
