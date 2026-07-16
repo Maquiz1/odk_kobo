@@ -1,0 +1,13 @@
+venv-odk/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+.git/
+.gitignore
+*.md
+*.sqlite3
+.env
+staticfiles/
+media/

@@ -1,0 +1,138 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard{% endblock %}
+{% block breadcrumb %}Dashboard{% endblock %}
+{% block page_header %}Dashboard{% endblock %}
+
+{% block content %}
+
+{# ── Stats Cards ── #}
+<div class="row g-4 mb-4">
+    <div class="col-sm-6 col-xl-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body d-flex align-items-center gap-3">
+                <div class="rounded-3 bg-primary bg-opacity-10 p-3">
+                    <i class="bi bi-card-list fs-3 text-primary"></i>
+                </div>
+                <div>
+                    <div class="fs-2 fw-bold text-primary">{{ total_records }}</div>
+                    <div class="text-muted small">Total Records</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body d-flex align-items-center gap-3">
+                <div class="rounded-3 bg-warning bg-opacity-10 p-3">
+                    <i class="bi bi-folder-fill fs-3 text-warning"></i>
+                </div>
+                <div>
+                    <div class="fs-2 fw-bold text-warning">{{ total_projects }}</div>
+                    <div class="text-muted small">Active Projects</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% if total_users is not None %}
+    <div class="col-sm-6 col-xl-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body d-flex align-items-center gap-3">
+                <div class="rounded-3 bg-success bg-opacity-10 p-3">
+                    <i class="bi bi-people-fill fs-3 text-success"></i>
+                </div>
+                <div>
+                    <div class="fs-2 fw-bold text-success">{{ total_users }}</div>
+                    <div class="text-muted small">System Users</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    <div class="col-sm-6 col-xl-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body d-flex align-items-center gap-3">
+                <div class="rounded-3 bg-info bg-opacity-10 p-3">
+                    <i class="bi bi-activity fs-3 text-info"></i>
+                </div>
+                <div>
+                    <div class="fs-2 fw-bold text-info">{{ projects_with_counts|length }}</div>
+                    <div class="text-muted small">My Projects</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    {# ── Recent Submissions ── #}
+    <div class="col-lg-8">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+                <h6 class="mb-0 fw-semibold"><i class="bi bi-clock-history me-2 text-primary"></i>Recent Submissions</h6>
+                <a href="{% url 'record_list' %}" class="btn btn-sm btn-outline-primary">View All</a>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-4">Kobo ID</th>
+                            <th>Project</th>
+                            <th>Submitted By</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for record in recent_records %}
+                        <tr>
+                            <td class="ps-4">
+                                <a href="{% url 'record_detail' record.pk %}" class="fw-semibold text-decoration-none">
+                                    {{ record.kobo_id|truncatechars:20 }}
+                                </a>
+                            </td>
+                            <td>
+                                {% if record.project %}
+                                <span class="badge bg-warning text-dark">{{ record.project.name }}</span>
+                                {% else %}
+                                <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-muted">{{ record.submitted_by|default:"—" }}</td>
+                            <td class="text-muted small">{{ record.created_at|date:"d M Y, H:i" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center py-4 text-muted">
+                                <i class="bi bi-inbox d-block fs-4 mb-1"></i> No submissions yet.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    {# ── Projects Summary ── #}
+    <div class="col-lg-4">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white py-3">
+                <h6 class="mb-0 fw-semibold"><i class="bi bi-folder-fill me-2 text-warning"></i>Projects Summary</h6>
+            </div>
+            <div class="list-group list-group-flush">
+                {% for project in projects_with_counts %}
+                <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                    <div>
+                        <div class="fw-semibold small">{{ project.name }}</div>
+                        <small class="text-muted">{{ project.members.count }} member{{ project.members.count|pluralize }}</small>
+                    </div>
+                    <span class="badge bg-primary rounded-pill">{{ project.records.count }}</span>
+                </div>
+                {% empty %}
+                <div class="list-group-item text-muted fst-italic small py-3">No projects assigned.</div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

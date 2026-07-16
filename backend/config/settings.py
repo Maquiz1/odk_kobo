@@ -29,7 +29,7 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'fallback-secret-key-if-missing')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'False').lower() in ('true', '1', 't')
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['rtis.tamris.org', 'www.rtis.tamris.org', 'localhost', '127.0.0.1']
 
 
 # Application definition
@@ -49,6 +49,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',  # serve static files in production
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -133,5 +134,32 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# Static & media files
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICS_DIRS = [BASE_DIR / 'static']
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
+# CSRF trusted origins — required when behind a reverse proxy (nginx / Cloudflare)
+CSRF_TRUSTED_ORIGINS = [
+    'https://rtis.tamris.org',
+    'https://www.rtis.tamris.org',
+]
+
 # Custom User Model
 AUTH_USER_MODEL = 'accounts.CustomUser'
+
+# Auth redirects
+LOGIN_REDIRECT_URL = 'record_list'   # where to go after successful login
+LOGOUT_REDIRECT_URL = 'login'        # where to go after logout
+LOGIN_URL = 'login'                  # Django default, but make it explicit
+
+# Kobo Webhook — secret token to validate incoming submissions
+KOBO_WEBHOOK_TOKEN = os.getenv('KOBO_WEBHOOK_TOKEN', '')
+
+# Public base URL of this app — used when registering webhooks with KoboToolbox.
+# Must be reachable from the internet (not localhost) in production.
+SITE_URL = os.getenv('SITE_URL', 'http://localhost:8000').rstrip('/')

@@ -7,15 +7,33 @@
 
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-md-7">
+    <div class="col-md-8">
         <div class="card shadow-sm">
             <div class="card-header bg-white py-3">
                 <h5 class="mb-0"><i class="bi bi-folder-fill me-2 text-warning"></i>{{ title }}</h5>
             </div>
             <div class="card-body p-4">
-                <form method="post">
+                <form method="post" enctype="multipart/form-data">
                     {% csrf_token %}
-                    {% bootstrap_form form %}
+
+                    {# Render fields manually to group them nicely #}
+                    {% bootstrap_field form.name %}
+                    {% bootstrap_field form.description %}
+                    {% bootstrap_field form.kobo_asset_id %}
+                    {% bootstrap_field form.xlsform %}
+                    {% bootstrap_field form.is_active %}
+
+                    {% if form.project_admins %}
+                    <hr class="my-4">
+                    <h6 class="text-muted fw-semibold mb-3">
+                        <i class="bi bi-shield-lock me-1"></i> Project Admins
+                        <small class="fw-normal ms-1">(Super Admin only)</small>
+                    </h6>
+                    <div class="p-3 border rounded bg-light">
+                        {% bootstrap_field form.project_admins show_label=False %}
+                    </div>
+                    {% endif %}
+
                     <div class="mt-4 d-flex justify-content-end gap-2">
                         <a href="{% url 'project_list' %}" class="btn btn-outline-secondary">
                             <i class="bi bi-x-circle me-1"></i> Cancel

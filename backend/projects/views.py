@@ -43,7 +43,7 @@ def project_create(request):
         messages.error(request, 'Only Super Admins can create new projects.')
         return redirect('project_list')
     if request.method == 'POST':
-        form = ProjectForm(request.POST, request_user=request.user)
+        form = ProjectForm(request.POST, request.FILES, request_user=request.user)
         if form.is_valid():
             form.save()
             messages.success(request, 'Project created successfully!')
@@ -67,7 +67,7 @@ def project_update(request, pk):
     project = get_object_or_404(allowed, pk=pk)
 
     if request.method == 'POST':
-        form = ProjectForm(request.POST, instance=project, request_user=request.user)
+        form = ProjectForm(request.POST, request.FILES, instance=project, request_user=request.user)
         if form.is_valid():
             form.save()
             messages.success(request, f'Project "{project.name}" updated!')

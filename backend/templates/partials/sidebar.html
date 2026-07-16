@@ -4,11 +4,16 @@
     </div>
     <ul class="list-unstyled mt-3">
         <li>
-            <a href="{% url 'record_list' %}" class="{% if request.resolver_match.url_name == 'record_list' %}active{% endif %}">
+            <a href="{% url 'home' %}" class="{% if request.resolver_match.url_name == 'home' %}active{% endif %}">
+                <i class="bi bi-speedometer2 me-2"></i> Dashboard
+            </a>
+        </li>
+        <li>
+            <a href="{% url 'record_list' %}" class="{% if 'record' in request.resolver_match.url_name and request.resolver_match.url_name != 'home' %}active{% endif %}">
                 <i class="bi bi-card-list me-2"></i> Kobo Records
             </a>
         </li>
-        {% if request.user.is_superuser or request.user.groups.all|length > 0 and 'Admin' in request.user.groups.values_list %}
+        {% if request.user.is_superuser or perms.projects.view_project %}
         <li>
             <a href="{% url 'project_list' %}" class="{% if 'project' in request.resolver_match.url_name %}active{% endif %}">
                 <i class="bi bi-folder-fill me-2"></i> Projects
@@ -18,7 +23,7 @@
         {% if perms.accounts.view_customuser %}
         <li>
             <a href="{% url 'user_list' %}" class="{% if 'user' in request.resolver_match.url_name %}active{% endif %}">
-                <i class="bi bi-people me-2"></i> User Management
+                <i class="bi bi-people-fill me-2"></i> User Management
             </a>
         </li>
         {% endif %}

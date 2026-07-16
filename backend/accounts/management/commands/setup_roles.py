@@ -40,9 +40,12 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(f"Clerk group initialized with permissions."))
 
         # 3. Setup Admin Group
-        # Admin can view, add, change, delete users.
+        # Admin can view, add, change, delete users, and manage records.
         admin_group, created = Group.objects.get_or_create(name='Admin')
-        admin_group.permissions.add(view_user, add_user, change_user, delete_user)
+        admin_group.permissions.add(
+            view_user, add_user, change_user, delete_user,
+            view_record, add_record, change_record, delete_record
+        )
         self.stdout.write(self.style.SUCCESS(f"Admin group initialized with permissions."))
 
         self.stdout.write(self.style.SUCCESS('Successfully completed role setup!'))

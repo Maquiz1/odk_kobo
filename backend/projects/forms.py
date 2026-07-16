@@ -9,12 +9,13 @@ class ProjectForm(forms.ModelForm):
     """
     class Meta:
         model = Project
-        fields = ('name', 'description', 'kobo_asset_id', 'is_active', 'project_admins')
+        fields = ('name', 'description', 'kobo_asset_id', 'is_active', 'xlsform', 'project_admins')
         labels = {
             'name': 'Project Name',
             'description': 'Description',
             'kobo_asset_id': 'Kobo Asset ID',
             'is_active': 'Active',
+            'xlsform': 'ODK XLSForm File (.xlsx)',
             'project_admins': 'Assign Project Admins',
         }
         widgets = {
@@ -23,6 +24,7 @@ class ProjectForm(forms.ModelForm):
         }
         help_texts = {
             'project_admins': 'Select Admin users who will manage this project\'s Clerks and Coordinators.',
+            'xlsform': 'Upload the XLSX file of your XLSForm to enable user-friendly dynamic editing forms.',
         }
 
     def __init__(self, *args, **kwargs):

@@ -9,10 +9,20 @@
 <div class="row justify-content-center">
     <div class="col-md-8">
         <div class="card shadow-sm">
-            <div class="card-header bg-white py-3">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">
                     <i class="bi bi-file-earmark-text me-2 text-primary"></i>{{ title }}
                 </h5>
+                {% if form.dynamic_fields_active %}
+                <div class="btn-group btn-group-sm" role="group" aria-label="Language Toggle">
+                    <button type="button" class="btn btn-outline-primary active" id="btn-lang-en" onclick="setFormLanguage('en')">
+                        🇬🇧 English
+                    </button>
+                    <button type="button" class="btn btn-outline-primary" id="btn-lang-sw" onclick="setFormLanguage('sw')">
+                        🇹🇿 Swahili
+                    </button>
+                </div>
+                {% endif %}
             </div>
             <div class="card-body p-4">
                 <form method="post">
@@ -37,4 +47,84 @@
         </div>
     </div>
 </div>
+
+{% if form.dynamic_fields_active %}
+{{ form.project.schema_json|json_script:"kobo-schema-json" }}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        setFormLanguage('en');
+    });
+
+    function setFormLanguage(lang) {
+        const schemaEl = document.getElementById('kobo-schema-json');
+        if (!schemaEl) return;
+        
+        const schema = JSON.parse(schemaEl.textContent);
+        if (!schema || !schema.fields) return;
+
+        // Toggle active classes on buttons
+        const btnEn = document.getElementById('btn-lang-en');
+        const btnSw = document.getElementById('btn-lang-sw');
+        if (btnEn) btnEn.classList.toggle('active', lang === 'en');
+        if (btnSw) btnSw.classList.toggle('active', lang === 'sw');
+
+        schema.fields.forEach(field => {
+            const fName = field.name;
+            const labels = field.labels || {};
+            const hints = field.hints || {};
+            
+            const labelText = labels[lang] || labels['en'] || fName;
+            const hintText = hints[lang] || hints['en'] || '';
+
+            // 1. Update labels
+            const labelEl = document.querySelector(`label[for="id_kobo_field_${fName}"]`);
+            if (labelEl) {
+                if (field.required) {
+                    labelEl.innerHTML = labelText + ' <span class="text-danger">*</span>';
+                } else {
+                    labelEl.innerHTML = labelText;
+                }
+            }
+
+            // 2. Update hints/help text
+            const hintEl = document.getElementById(`id_kobo_field_${fName}-help`) ||
+                           document.getElementById(`id_kobo_field_${fName}_helptext`) ||
+                           document.querySelector(`#id_kobo_field_${fName} ~ .form-text`);
+            if (hintEl) {
+                hintEl.textContent = hintText;
+            }
+
+            // 3. Update select dropdown choices
+            const selectEl = document.getElementById(`id_kobo_field_${fName}`);
+            if (selectEl && selectEl.tagName === 'SELECT') {
+                const choiceListName = field.choice_list;
+                const choices = schema.choices[choiceListName] || [];
+                Array.from(selectEl.options).forEach(option => {
+                    if (option.value === "") return;
+                    const match = choices.find(c => String(c.name) === String(option.value));
+                    if (match) {
+                        const optLabel = (match.labels && match.labels[lang]) || match.label || match.name;
+                        option.textContent = optLabel;
+                    }
+                });
+            }
+
+            // 4. Update checkbox list labels
+            if (field.type === 'select_multiple') {
+                const choices = schema.choices[field.choice_list] || [];
+                choices.forEach(choice => {
+                    const inputEl = document.querySelector(`input[name="kobo_field_${fName}"][value="${choice.name}"]`);
+                    if (inputEl) {
+                        const checkboxLabel = document.querySelector(`label[for="${inputEl.id}"]`);
+                        if (checkboxLabel) {
+                            const chLabel = (choice.labels && choice.labels[lang]) || choice.label || choice.name;
+                            checkboxLabel.textContent = chLabel;
+                        }
+                    }
+                });
+            }
+        });
+    }
+</script>
+{% endif %}
 {% endblock %}

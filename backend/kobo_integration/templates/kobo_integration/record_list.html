@@ -5,28 +5,61 @@
 {% block page_header %}Kobo Records{% endblock %}
 
 {% block content %}
-<div class="card shadow-sm">
+{# ── Search & Filter Panel ── #}
+<div class="card shadow-sm mb-4">
     <div class="card-header bg-white py-3">
-        <div class="row align-items-center">
-            <div class="col-md-6">
-                <h5 class="mb-0"><i class="bi bi-card-list me-2 text-primary"></i>All Submissions</h5>
+        <h6 class="mb-0 fw-semibold text-muted"><i class="bi bi-filter me-2"></i>Filter Records</h6>
+    </div>
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label for="id_q" class="form-label small fw-semibold text-muted text-uppercase">Search</label>
+                <input type="search" name="q" id="id_q" value="{{ query }}" class="form-control form-control-sm" placeholder="ID or Submitter...">
             </div>
-            <div class="col-md-6">
-                <div class="d-flex gap-2 justify-content-md-end">
-                    <!-- Search form -->
-                    <form method="get" class="d-flex">
-                        <input type="search" name="q" value="{{ query }}" class="form-control form-control-sm" placeholder="Search by ID or submitter…">
-                        <button type="submit" class="btn btn-sm btn-outline-secondary ms-1">
-                            <i class="bi bi-search"></i>
-                        </button>
-                    </form>
-                    {% if perms.kobo_integration.add_record %}
-                    <a href="{% url 'record_create' %}" class="btn btn-sm btn-primary">
-                        <i class="bi bi-plus-circle-fill me-1"></i> Add Record
-                    </a>
-                    {% endif %}
-                </div>
+            <div class="col-md-3">
+                <label for="id_project" class="form-label small fw-semibold text-muted text-uppercase">Project</label>
+                <select name="project" id="id_project" class="form-select form-select-sm">
+                    <option value="">All Projects</option>
+                    {% for p in projects %}
+                    <option value="{{ p.id }}" {% if project_filter == p.id|stringformat:"s" %}selected{% endif %}>{{ p.name }}</option>
+                    {% endfor %}
+                </select>
             </div>
+            <div class="col-md-2">
+                <label for="id_date_from" class="form-label small fw-semibold text-muted text-uppercase">Date From</label>
+                <input type="date" name="date_from" id="id_date_from" value="{{ date_from }}" class="form-control form-control-sm">
+            </div>
+            <div class="col-md-2">
+                <label for="id_date_to" class="form-label small fw-semibold text-muted text-uppercase">Date To</label>
+                <input type="date" name="date_to" id="id_date_to" value="{{ date_to }}" class="form-control form-control-sm">
+            </div>
+            <div class="col-md-2 d-flex align-items-end gap-1">
+                <button type="submit" class="btn btn-sm btn-primary w-100">
+                    <i class="bi bi-search me-1"></i> Apply
+                </button>
+                <a href="{% url 'record_list' %}" class="btn btn-sm btn-outline-secondary" title="Clear Filters">
+                    <i class="bi bi-x-circle"></i>
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+{# ── Records List Card ── #}
+<div class="card shadow-sm">
+    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="bi bi-card-list me-2 text-primary"></i>All Submissions</h5>
+        <div class="d-flex gap-2">
+            {% if records %}
+            <a href="{% url 'export_records_csv' %}?{{ request.GET.urlencode }}" class="btn btn-sm btn-outline-success">
+                <i class="bi bi-file-earmark-spreadsheet me-1"></i> Export to CSV
+            </a>
+            {% endif %}
+            {% if perms.kobo_integration.add_record %}
+            <a href="{% url 'record_create' %}" class="btn btn-sm btn-primary">
+                <i class="bi bi-plus-circle-fill me-1"></i> Add Record
+            </a>
+            {% endif %}
         </div>
     </div>
     <div class="card-body p-0">
@@ -35,10 +68,10 @@
                 <tr>
                     <th class="ps-4">#</th>
                     <th>Kobo ID</th>
+                    <th>Project</th>
                     <th>UUID</th>
                     <th>Submitted By</th>
                     <th>Created</th>
-                    <th>Last Updated</th>
                     {% if perms.kobo_integration.change_record or perms.kobo_integration.delete_record %}
                     <th>Actions</th>
                     {% endif %}
@@ -48,11 +81,21 @@
                 {% for record in records %}
                 <tr>
                     <td class="ps-4 text-muted">{{ forloop.counter }}</td>
-                    <td class="fw-semibold">{{ record.kobo_id }}</td>
+                    <td>
+                        <a href="{% url 'record_detail' record.pk %}" class="fw-semibold text-decoration-none">
+                            {{ record.kobo_id }}
+                        </a>
+                    </td>
+                    <td>
+                        {% if record.project %}
+                        <span class="badge bg-warning text-dark">{{ record.project.name }}</span>
+                        {% else %}
+                        <span class="text-muted fst-italic small">No project</span>
+                        {% endif %}
+                    </td>
                     <td class="text-muted small font-monospace">{{ record.uuid|default:"—" }}</td>
                     <td>{{ record.submitted_by|default:"—" }}</td>
                     <td class="text-muted small">{{ record.created_at|date:"d M Y, H:i" }}</td>
-                    <td class="text-muted small">{{ record.updated_at|date:"d M Y, H:i" }}</td>
                     {% if perms.kobo_integration.change_record or perms.kobo_integration.delete_record %}
                     <td>
                         <div class="d-flex gap-1">
@@ -74,7 +117,7 @@
                 <tr>
                     <td colspan="7" class="text-center py-5 text-muted">
                         <i class="bi bi-inbox display-6 d-block mb-2"></i>
-                        No records found.
+                        No records found matching filters.
                         {% if perms.kobo_integration.add_record %}
                         <br><a href="{% url 'record_create' %}" class="btn btn-sm btn-primary mt-3">Add First Record</a>
                         {% endif %}

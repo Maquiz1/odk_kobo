@@ -7,7 +7,7 @@
 
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-md-7">
+    <div class="col-md-8">
         <div class="card shadow-sm">
             <div class="card-header bg-white py-3">
                 <h5 class="mb-0"><i class="bi bi-person-fill me-2 text-primary"></i>{{ title }}</h5>
@@ -15,7 +15,43 @@
             <div class="card-body p-4">
                 <form method="post">
                     {% csrf_token %}
-                    {% bootstrap_form form %}
+
+                    {# Basic info #}
+                    {% bootstrap_field form.username %}
+                    {% bootstrap_field form.email %}
+
+                    {% if form.password1 %}
+                        {% bootstrap_field form.password1 %}
+                        {% bootstrap_field form.password2 %}
+                    {% endif %}
+
+                    {% if form.is_active %}
+                        {% bootstrap_field form.is_active %}
+                    {% endif %}
+
+                    {# Roles section #}
+                    <hr class="my-4">
+                    <h6 class="text-muted fw-semibold mb-3">
+                        <i class="bi bi-shield-check me-1"></i> Assign Roles
+                    </h6>
+                    <div class="p-3 border rounded bg-light mb-3">
+                        {% bootstrap_field form.groups show_label=False %}
+                    </div>
+
+                    {# Projects section #}
+                    <h6 class="text-muted fw-semibold mb-3">
+                        <i class="bi bi-folder-fill me-1 text-warning"></i> Assign Projects
+                    </h6>
+                    {% if form.projects.field.queryset.exists %}
+                    <div class="p-3 border rounded bg-light">
+                        {% bootstrap_field form.projects show_label=False %}
+                    </div>
+                    {% else %}
+                    <div class="p-3 border rounded bg-light text-muted fst-italic">
+                        No active projects available. Create a project first.
+                    </div>
+                    {% endif %}
+
                     <div class="mt-4 d-flex justify-content-end gap-2">
                         <a href="{% url 'user_list' %}" class="btn btn-outline-secondary">
                             <i class="bi bi-x-circle me-1"></i> Cancel

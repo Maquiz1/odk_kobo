@@ -8,9 +8,11 @@
 <div class="card shadow-sm">
     <div class="card-header d-flex justify-content-between align-items-center bg-white py-3">
         <h5 class="mb-0"><i class="bi bi-folder-fill me-2 text-warning"></i>All Projects</h5>
+        {% if request.user.is_superuser %}
         <a href="{% url 'project_create' %}" class="btn btn-sm btn-primary">
             <i class="bi bi-folder-plus me-1"></i> Add Project
         </a>
+        {% endif %}
     </div>
     <div class="card-body p-0">
         <table class="table table-hover align-middle mb-0">
@@ -19,6 +21,7 @@
                     <th class="ps-4">#</th>
                     <th>Project Name</th>
                     <th>Kobo Asset ID</th>
+                    <th>Project Admins</th>
                     <th>Members</th>
                     <th>Records</th>
                     <th>Status</th>
@@ -37,6 +40,13 @@
                     </td>
                     <td class="font-monospace small text-muted">{{ project.kobo_asset_id|default:"—" }}</td>
                     <td>
+                        {% for admin in project.project_admins.all %}
+                            <span class="badge bg-danger me-1">{{ admin.username }}</span>
+                        {% empty %}
+                            <span class="text-muted fst-italic small">None assigned</span>
+                        {% endfor %}
+                    </td>
+                    <td>
                         <span class="badge bg-secondary">{{ project.members.count }} user{{ project.members.count|pluralize }}</span>
                     </td>
                     <td>
@@ -51,21 +61,30 @@
                     </td>
                     <td>
                         <div class="d-flex gap-1">
+                            {% if request.user.is_superuser or request.user in project.project_admins.all %}
+                            <a href="{% url 'kobo_sync' project.pk %}" class="btn btn-sm btn-outline-success" title="Sync from Kobo">
+                                <i class="bi bi-arrow-repeat"></i>
+                            </a>
+                            {% endif %}
                             <a href="{% url 'project_update' project.pk %}" class="btn btn-sm btn-outline-primary" title="Edit">
                                 <i class="bi bi-pencil-fill"></i>
                             </a>
+                            {% if request.user.is_superuser %}
                             <a href="{% url 'project_delete' project.pk %}" class="btn btn-sm btn-outline-danger" title="Delete">
                                 <i class="bi bi-trash-fill"></i>
                             </a>
+                            {% endif %}
                         </div>
                     </td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="7" class="text-center py-5 text-muted">
+                    <td colspan="8" class="text-center py-5 text-muted">
                         <i class="bi bi-folder display-6 d-block mb-2"></i>
                         No projects yet.
+                        {% if request.user.is_superuser %}
                         <br><a href="{% url 'project_create' %}" class="btn btn-sm btn-primary mt-3">Create First Project</a>
+                        {% endif %}
                     </td>
                 </tr>
                 {% endfor %}
