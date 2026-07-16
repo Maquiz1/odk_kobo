@@ -29,8 +29,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    expose:
-      - "8000"
+    ports:
+      - "127.0.0.1:8001:8000"   # only accessible locally — nginx will proxy from outside
     command: >
       sh -c "python manage.py migrate --noinput &&
              python manage.py setup_roles &&
@@ -40,19 +40,6 @@ services:
                --timeout 120
                --access-logfile -
                --error-logfile -"
-
-  nginx:
-    image: nginx:alpine
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
-      - ./nginx/certs:/etc/nginx/certs:ro
-      - media_files:/app/media:ro
-    depends_on:
-      - web
 
 volumes:
   postgres_data:
