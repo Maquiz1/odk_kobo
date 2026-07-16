@@ -57,38 +57,81 @@ def dashboard(request):
 @login_required
 @permission_required('kobo_integration.view_record', raise_exception=True)
 def record_list(request):
-    """List records with search and filter support."""
+    """List records with search, advanced filter, and pagination support."""
+    from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+
     query = request.GET.get('q', '').strip()
     project_filter = request.GET.get('project', '').strip()
+    enumerator_filter = request.GET.get('enumerator', '').strip()
     date_from = request.GET.get('date_from', '').strip()
     date_to = request.GET.get('date_to', '').strip()
 
     records = _base_record_qs(request.user).order_by('-created_at')
 
+    # Advanced Q Search across main fields and JSON data keys
     if query:
         records = records.filter(
-            Q(kobo_id__icontains=query) | Q(submitted_by__icontains=query)
+            Q(kobo_id__icontains=query) |
+            Q(uuid__icontains=query) |
+            Q(submitted_by__icontains=query) |
+            Q(data__patient_fname__icontains=query) |
+            Q(data__patient_mname__icontains=query) |
+            Q(data__patient_lname__icontains=query) |
+            Q(data__study_id__icontains=query) |
+            Q(data__today__icontains=query) |
+            Q(data__enumerator__icontains=query)
         )
+
     if project_filter:
         records = records.filter(project__id=project_filter)
+
+    if enumerator_filter:
+        records = records.filter(
+            Q(data__enumerator=enumerator_filter) | Q(submitted_by=enumerator_filter)
+        )
+
+    # Date range filters on 'today' field inside Kobo data (string 'YYYY-MM-DD')
     if date_from:
-        records = records.filter(created_at__date__gte=date_from)
+        records = records.filter(data__today__gte=date_from)
     if date_to:
-        records = records.filter(created_at__date__lte=date_to)
+        records = records.filter(data__today__lte=date_to)
+
+    # Fetch unique enumerators for the filter dropdown
+    all_records = _base_record_qs(request.user)
+    enumerators = set()
+    for r in all_records:
+        enum_val = r.data.get('enumerator') or r.submitted_by
+        if enum_val:
+            enumerators.add(enum_val)
+    enumerators = sorted(list(enumerators))
 
     # Projects for filter dropdown
     is_privileged = request.user.is_superuser or request.user.groups.filter(name='Admin').exists()
     projects = Project.objects.filter(is_active=True) if is_privileged else request.user.projects.filter(is_active=True)
 
+    # Pagination: 10 records per page
+    paginator = Paginator(records, 10)
+    page = request.GET.get('page')
+    try:
+        page_obj = paginator.page(page)
+    except PageNotAnInteger:
+        page_obj = paginator.page(1)
+    except EmptyPage:
+        page_obj = paginator.page(paginator.num_pages)
+
     return render(request, 'kobo_integration/record_list.html', {
-        'records': records,
+        'page_obj': page_obj,
+        'records': page_obj.object_list,
         'query': query,
         'project_filter': project_filter,
+        'enumerator_filter': enumerator_filter,
         'date_from': date_from,
         'date_to': date_to,
         'projects': projects,
+        'enumerators': enumerators,
         'title': 'Kobo Records',
     })
+
 
 
 @login_required
@@ -219,21 +262,26 @@ def kobo_sync(request, project_id):
         submissions_url = f"{api_url}assets/{project.kobo_asset_id}/data/?format=json"
         headers = {'Authorization': f'Token {api_token}'}
 
-        try:
-            response = requests.get(submissions_url, headers=headers, timeout=30)
-            if response.status_code != 200:
-                messages.error(request, f'Kobo API Error (Status {response.status_code}): {response.text[:200]}')
-                return render(request, 'kobo_integration/kobo_sync.html', {'project': project})
+        submissions = []
+        next_url = submissions_url
 
-            data = response.json()
-            submissions = []
-            if isinstance(data, list):
-                submissions = data
-            elif isinstance(data, dict) and 'results' in data:
-                submissions = data['results']
-            else:
-                messages.error(request, 'Unexpected data structure returned from Kobo API.')
-                return render(request, 'kobo_integration/kobo_sync.html', {'project': project})
+        try:
+            while next_url:
+                response = requests.get(next_url, headers=headers, timeout=30)
+                if response.status_code != 200:
+                    messages.error(request, f'Kobo API Error (Status {response.status_code}): {response.text[:200]}')
+                    return render(request, 'kobo_integration/kobo_sync.html', {'project': project})
+
+                data = response.json()
+                if isinstance(data, list):
+                    submissions.extend(data)
+                    next_url = None
+                elif isinstance(data, dict) and 'results' in data:
+                    submissions.extend(data['results'])
+                    next_url = data.get('next')  # Follow next page URL
+                else:
+                    messages.error(request, 'Unexpected data structure returned from Kobo API.')
+                    return render(request, 'kobo_integration/kobo_sync.html', {'project': project})
 
             created_count = 0
             updated_count = 0
