@@ -21,6 +21,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+      network: host          # allows pip to reach PyPI during build
     restart: unless-stopped
     env_file:
       - ./backend/.env.prod
