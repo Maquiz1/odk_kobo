@@ -13,9 +13,9 @@ from accounts.models import CustomUser
 
 
 def _base_record_qs(user):
-    """Return the base queryset of records visible to this user."""
+    """Return the base queryset of records visible to this user, excluding deleted ones."""
     is_privileged = user.is_superuser or user.groups.filter(name='Admin').exists()
-    qs = Record.objects.select_related('project').all()
+    qs = Record.objects.select_related('project').filter(is_deleted=False)
     if not is_privileged:
         qs = qs.filter(project__in=user.projects.all())
     return qs
@@ -294,20 +294,30 @@ def kobo_sync(request, project_id):
                 if not kobo_id:
                     continue
 
-                record, created = Record.objects.update_or_create(
-                    kobo_id=str(kobo_id),
-                    defaults={
-                        'uuid': uuid,
-                        'submitted_by': submitted_by,
-                        'data': payload,
-                        'project': project,
-                    }
-                )
-
-                if created:
-                    created_count += 1
-                else:
+                # Check if record already exists to respect local modifications and deletions
+                existing_record = Record.objects.filter(kobo_id=str(kobo_id)).first()
+                if existing_record:
+                    if existing_record.is_deleted or existing_record.is_locally_updated:
+                        # Skip overwriting this record to preserve local updates/deletes
+                        continue
+                    
+                    # Update non-locally-modified record
+                    existing_record.uuid = uuid
+                    existing_record.submitted_by = submitted_by
+                    existing_record.data = payload
+                    existing_record.project = project
+                    existing_record.save()
                     updated_count += 1
+                else:
+                    # Create new record
+                    Record.objects.create(
+                        kobo_id=str(kobo_id),
+                        uuid=uuid,
+                        submitted_by=submitted_by,
+                        data=payload,
+                        project=project
+                    )
+                    created_count += 1
 
             messages.success(
                 request,
@@ -441,7 +451,9 @@ def record_create(request):
     if request.method == 'POST':
         form = RecordForm(request.POST, request_user=request.user)
         if form.is_valid():
-            form.save()
+            record = form.save(commit=False)
+            record.is_locally_updated = True  # Flag to prevent sync overwrites
+            record.save()
             messages.success(request, 'Record created successfully!')
             return redirect('record_list')
     else:
@@ -459,7 +471,9 @@ def record_update(request, pk):
     if request.method == 'POST':
         form = RecordForm(request.POST, instance=record, request_user=request.user)
         if form.is_valid():
-            form.save()
+            record = form.save(commit=False)
+            record.is_locally_updated = True  # Flag to prevent sync overwrites
+            record.save()
             messages.success(request, f'Record "{record.kobo_id}" updated successfully!')
             return redirect('record_list')
     else:
@@ -477,7 +491,8 @@ def record_delete(request, pk):
     record = get_object_or_404(Record, pk=pk)
     if request.method == 'POST':
         kobo_id = record.kobo_id
-        record.delete()
+        record.is_deleted = True  # Soft delete
+        record.save()
         messages.success(request, f'Record "{kobo_id}" has been deleted.')
         return redirect('record_list')
     return render(request, 'kobo_integration/record_confirm_delete.html', {

@@ -20,6 +20,12 @@ class Record(models.Model):
     # We store the raw form data in a JSON field for flexibility
     data = models.JSONField(default=dict)
     
+    # Flag to support soft deletion (hides from UI but keeps in DB to prevent re-sync recreation)
+    is_deleted = models.BooleanField(default=False)
+    
+    # Flag to protect local updates from being overwritten during Kobo syncs
+    is_locally_updated = models.BooleanField(default=False)
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
