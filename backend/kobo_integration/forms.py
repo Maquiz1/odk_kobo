@@ -107,7 +107,8 @@ class RecordForm(forms.ModelForm):
                 f_name = field['name']
                 f_label = field.get('labels', {}).get('en') or field.get('label') or f_name
                 f_help_text = field.get('hints', {}).get('en') or ""
-                f_required = field.get('required', False)
+                f_required_raw = field.get('required', False)
+                f_required = str(f_required_raw).lower() in ['true', 'yes', '1']
                 choice_list_name = field.get('choice_list', '')
 
                 form_key = f'kobo_field_{f_name}'
