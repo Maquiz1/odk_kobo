@@ -113,6 +113,7 @@ def parse_xlsform(file_path):
             required_idx = None
             appearance_idx = None
             constraint_idx = None
+            relevant_idx = None
             cf_idx = None
             cf2_idx = None
 
@@ -129,6 +130,8 @@ def parse_xlsform(file_path):
                     appearance_idx = idx
                 elif h == 'constraint':
                     constraint_idx = idx
+                elif h == 'relevant':
+                    relevant_idx = idx
                 elif h == 'cf':
                     cf_idx = idx
                 elif h == 'cf2':
@@ -182,6 +185,10 @@ def parse_xlsform(file_path):
                     if constraint_idx is not None and constraint_idx < len(row) and row[constraint_idx] is not None:
                         f_constraint = str(row[constraint_idx]).strip()
 
+                    f_relevant = ""
+                    if relevant_idx is not None and relevant_idx < len(row) and row[relevant_idx] is not None:
+                        f_relevant = str(row[relevant_idx]).strip()
+
                     f_cf = ""
                     if cf_idx is not None and cf_idx < len(row) and row[cf_idx] is not None:
                         f_cf = str(row[cf_idx]).strip()
@@ -208,6 +215,7 @@ def parse_xlsform(file_path):
                         "required": f_required,
                         "appearance": f_appearance,
                         "constraint": f_constraint,
+                        "relevant": f_relevant,
                         "cf": f_cf,
                         "cf2": f_cf2
                     })

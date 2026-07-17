@@ -51,80 +51,191 @@
 {% if form.dynamic_fields_active %}
 {{ form.project.schema_json|json_script:"kobo-schema-json" }}
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        setFormLanguage('en');
-    });
+    // ─── XLSForm Relevant / Skip-Logic Engine ─────────────────────────────────
+    //
+    // XLSForm relevant expressions use ODK syntax like:
+    //   ${field_name} = 'value'
+    //   ${field_name} != ''
+    //   ${a} = '1' and ${b} = '2'
+    //   selected(${field_name}, 'choice')
+    //
+    // We translate these into JS evaluations at runtime.
+
+    const SCHEMA = JSON.parse(document.getElementById('kobo-schema-json')?.textContent || '{}');
+
+    /**
+     * Get the current value of a field by its XLSForm name.
+     * Returns a string (or space-joined for multi-select).
+     */
+    function getFieldValue(fieldName) {
+        const el = document.getElementById(`id_kobo_field_${fieldName}`);
+        if (!el) return '';
+        if (el.tagName === 'SELECT') return el.value || '';
+        if (el.type === 'checkbox') return el.checked ? el.value : '';
+        // multi-select checkboxes
+        const checkboxes = document.querySelectorAll(`input[name="kobo_field_${fieldName}"]:checked`);
+        if (checkboxes.length > 0) return Array.from(checkboxes).map(c => c.value).join(' ');
+        return el.value || '';
+    }
+
+    /**
+     * Evaluate an XLSForm `relevant` expression.
+     * Returns true  → field should be visible.
+     * Returns false → field should be hidden.
+     * Empty/null expression → always visible.
+     */
+    function evaluateRelevant(expr) {
+        if (!expr || expr.trim() === '') return true;
+
+        try {
+            // Replace ${field_name} with the current value (as a JS string literal)
+            let js = expr
+                // selected(${x}, 'y') → current value contains 'y'
+                .replace(/selected\(\$\{(\w+)\}\s*,\s*'([^']*)'\)/g, (_, name, val) => {
+                    const v = getFieldValue(name);
+                    return JSON.stringify(v.split(' ').includes(val));
+                })
+                // ${field_name} → quoted current value
+                .replace(/\$\{(\w+)\}/g, (_, name) => JSON.stringify(getFieldValue(name)));
+
+            // XLSForm uses single-word logic operators; normalise to JS
+            js = js
+                .replace(/\band\b/gi, '&&')
+                .replace(/\bor\b/gi,  '||')
+                .replace(/\bnot\b/gi, '!')
+                // XLSForm equality/inequality
+                .replace(/!=/g, '!==')
+                .replace(/(?<![=!<>])=(?![=>])/g, '===');
+
+            // eslint-disable-next-line no-new-func
+            return Boolean(new Function(`return (${js})`)());
+        } catch (e) {
+            // If parsing fails, default to showing the field
+            console.warn('[skip-logic] Could not evaluate:', expr, e);
+            return true;
+        }
+    }
+
+    /**
+     * Get (or create) the outermost wrapper div for a field.
+     * django-bootstrap5 wraps each field in a <div class="mb-3"> or similar.
+     */
+    function getFieldWrapper(fieldName) {
+        const el = document.getElementById(`id_kobo_field_${fieldName}`) ||
+                   document.querySelector(`[name="kobo_field_${fieldName}"]`);
+        if (!el) return null;
+        // Walk up to find the bootstrap form-group wrapper (typically 2–3 levels up)
+        let wrapper = el.parentElement;
+        while (wrapper && !wrapper.matches('.mb-3, .mb-2, .form-group')) {
+            wrapper = wrapper.parentElement;
+            if (wrapper === document.body) return null;
+        }
+        return wrapper;
+    }
+
+    /**
+     * Show or hide a field wrapper and disable its inputs when hidden
+     * (so hidden fields are not submitted and don't fail required validation).
+     */
+    function setFieldVisible(fieldName, visible) {
+        const wrapper = getFieldWrapper(fieldName);
+        if (!wrapper) return;
+
+        wrapper.style.display = visible ? '' : 'none';
+
+        // Disable inputs inside hidden wrappers so they are excluded from form submission
+        const inputs = wrapper.querySelectorAll('input, select, textarea');
+        inputs.forEach(inp => {
+            inp.disabled = !visible;
+        });
+    }
+
+    /**
+     * Re-evaluate all skip-logic conditions and update visibility.
+     */
+    function applySkipLogic() {
+        if (!SCHEMA || !SCHEMA.fields) return;
+        SCHEMA.fields.forEach(field => {
+            const visible = evaluateRelevant(field.relevant || '');
+            setFieldVisible(field.name, visible);
+        });
+    }
+
+    // ─── Language switching ────────────────────────────────────────────────────
 
     function setFormLanguage(lang) {
-        const schemaEl = document.getElementById('kobo-schema-json');
-        if (!schemaEl) return;
-        
-        const schema = JSON.parse(schemaEl.textContent);
-        if (!schema || !schema.fields) return;
+        if (!SCHEMA || !SCHEMA.fields) return;
 
-        // Toggle active classes on buttons
         const btnEn = document.getElementById('btn-lang-en');
         const btnSw = document.getElementById('btn-lang-sw');
         if (btnEn) btnEn.classList.toggle('active', lang === 'en');
         if (btnSw) btnSw.classList.toggle('active', lang === 'sw');
 
-        schema.fields.forEach(field => {
+        SCHEMA.fields.forEach(field => {
             const fName = field.name;
             const labels = field.labels || {};
-            const hints = field.hints || {};
-            
-            const labelText = labels[lang] || labels['en'] || fName;
-            const hintText = hints[lang] || hints['en'] || '';
+            const hints  = field.hints  || {};
 
-            // 1. Update labels
+            const labelText = labels[lang] || labels['en'] || fName;
+            const hintText  = hints[lang]  || hints['en']  || '';
+
+            // 1. Update field label
             const labelEl = document.querySelector(`label[for="id_kobo_field_${fName}"]`);
             if (labelEl) {
-                if (field.required) {
-                    labelEl.innerHTML = labelText + ' <span class="text-danger">*</span>';
-                } else {
-                    labelEl.innerHTML = labelText;
-                }
+                labelEl.innerHTML = field.required
+                    ? labelText + ' <span class="text-danger">*</span>'
+                    : labelText;
             }
 
-            // 2. Update hints/help text
-            const hintEl = document.getElementById(`id_kobo_field_${fName}-help`) ||
-                           document.getElementById(`id_kobo_field_${fName}_helptext`) ||
-                           document.querySelector(`#id_kobo_field_${fName} ~ .form-text`);
-            if (hintEl) {
-                hintEl.textContent = hintText;
-            }
+            // 2. Update hint/help text
+            const hintEl =
+                document.getElementById(`id_kobo_field_${fName}-help`) ||
+                document.getElementById(`id_kobo_field_${fName}_helptext`) ||
+                document.querySelector(`#id_kobo_field_${fName} ~ .form-text`);
+            if (hintEl) hintEl.textContent = hintText;
 
-            // 3. Update select dropdown choices
+            // 3. Update select dropdown option labels
             const selectEl = document.getElementById(`id_kobo_field_${fName}`);
             if (selectEl && selectEl.tagName === 'SELECT') {
-                const choiceListName = field.choice_list;
-                const choices = schema.choices[choiceListName] || [];
-                Array.from(selectEl.options).forEach(option => {
-                    if (option.value === "") return;
-                    const match = choices.find(c => String(c.name) === String(option.value));
+                const choices = (SCHEMA.choices || {})[field.choice_list] || [];
+                Array.from(selectEl.options).forEach(opt => {
+                    if (opt.value === '') return;
+                    const match = choices.find(c => String(c.name) === String(opt.value));
                     if (match) {
-                        const optLabel = (match.labels && match.labels[lang]) || match.label || match.name;
-                        option.textContent = optLabel;
+                        opt.textContent = (match.labels && match.labels[lang]) || match.label || match.name;
                     }
                 });
             }
 
-            // 4. Update checkbox list labels
+            // 4. Update checkbox-list labels (select_multiple)
             if (field.type === 'select_multiple') {
-                const choices = schema.choices[field.choice_list] || [];
+                const choices = (SCHEMA.choices || {})[field.choice_list] || [];
                 choices.forEach(choice => {
-                    const inputEl = document.querySelector(`input[name="kobo_field_${fName}"][value="${choice.name}"]`);
-                    if (inputEl) {
-                        const checkboxLabel = document.querySelector(`label[for="${inputEl.id}"]`);
-                        if (checkboxLabel) {
-                            const chLabel = (choice.labels && choice.labels[lang]) || choice.label || choice.name;
-                            checkboxLabel.textContent = chLabel;
+                    const inp = document.querySelector(`input[name="kobo_field_${fName}"][value="${choice.name}"]`);
+                    if (inp) {
+                        const lbl = document.querySelector(`label[for="${inp.id}"]`);
+                        if (lbl) {
+                            lbl.textContent = (choice.labels && choice.labels[lang]) || choice.label || choice.name;
                         }
                     }
                 });
             }
         });
     }
+
+    // ─── Initialise ───────────────────────────────────────────────────────────
+
+    document.addEventListener('DOMContentLoaded', function () {
+        setFormLanguage('en');
+        applySkipLogic();  // evaluate on page load (important for edit mode)
+
+        // Re-evaluate skip logic whenever any field changes
+        document.querySelectorAll('input, select, textarea').forEach(el => {
+            el.addEventListener('change', applySkipLogic);
+            // Also fire on keyup so text fields trigger logic as the user types
+            el.addEventListener('keyup', applySkipLogic);
+        });
+    });
 </script>
 {% endif %}
 {% endblock %}
