@@ -57,7 +57,10 @@
 {# ── Records List Card ── #}
 <div class="card shadow-sm">
     <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-        <h5 class="mb-0"><i class="bi bi-card-list me-2 text-primary"></i>All Submissions</h5>
+        <h5 class="mb-0">
+            <i class="bi bi-card-list me-2 text-primary"></i>All Submissions
+            <span class="badge bg-secondary ms-2" style="font-size: 0.8rem;">{{ total_count }} total</span>
+        </h5>
         <div class="d-flex gap-2">
             {% if records %}
             <a href="{% url 'export_records_csv' %}?{{ request.GET.urlencode }}" class="btn btn-sm btn-outline-success">
@@ -92,18 +95,15 @@
                     <td class="ps-4 text-muted">{{ page_obj.start_index|add:forloop.counter0 }}</td>
                     <td>
                         <a href="{% url 'record_detail' record.pk %}" class="fw-semibold text-decoration-none">
-                            {{ record.data.patient_fname|default:"" }} {{ record.data.patient_mname|default:"" }} {{ record.data.patient_lname|default:"" }}
+                            {{ record.patient_name|default:"—" }}
                         </a>
-                        {% if not record.data.patient_fname and not record.data.patient_lname %}
-                        <span class="text-muted fst-italic small">No Name</span>
-                        {% endif %}
                     </td>
-                    <td class="font-monospace small">{{ record.data.study_id|default:"—" }}</td>
+                    <td class="font-monospace small">{{ record.study_id|default:"—" }}</td>
                     <td>
                         <span class="d-block small text-dark fw-semibold">{{ record.kobo_id }}</span>
                         <span class="text-muted small font-monospace" style="font-size: 0.75rem;">{{ record.uuid|default:"—" }}</span>
                     </td>
-                    <td>{{ record.data.enumerator|default:record.submitted_by|default:"—" }}</td>
+                    <td>{{ record.enumerator|default:"—" }}</td>
                     <td class="text-muted small">{{ record.data.today|default:"—" }}</td>
                     {% if perms.kobo_integration.change_record or perms.kobo_integration.delete_record %}
                     <td>

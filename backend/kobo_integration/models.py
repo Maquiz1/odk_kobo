@@ -32,6 +32,25 @@ class Record(models.Model):
     def __str__(self):
         return f"Record {self.kobo_id} [{self.project}]"
 
+    @property
+    def patient_name(self):
+        """Returns concatenated patient name from nested JSON keys."""
+        fname = self.data.get('section_1_0/patient_fname', '') or self.data.get('patient_fname', '')
+        mname = self.data.get('section_1_0/patient_mname', '') or self.data.get('patient_mname', '')
+        lname = self.data.get('section_1_0/patient_lname', '') or self.data.get('patient_lname', '')
+        full_name = f"{fname} {mname} {lname}".strip().replace('  ', ' ')
+        return full_name if full_name else None
+
+    @property
+    def study_id(self):
+        """Returns study_id from nested JSON keys."""
+        return self.data.get('section_1_0/study_id') or self.data.get('study_id')
+
+    @property
+    def enumerator(self):
+        """Returns enumerator from nested JSON keys."""
+        return self.data.get('section_1_0/enumerator') or self.data.get('enumerator') or self.submitted_by
+
     def get_translated_data(self):
         """
         Returns a list of dicts: [{'name': ..., 'label': ..., 'value': ..., 'raw_value': ...}]

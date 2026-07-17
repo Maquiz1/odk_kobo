@@ -68,18 +68,18 @@ def record_list(request):
 
     records = _base_record_qs(request.user).order_by('-created_at')
 
-    # Advanced Q Search across main fields and JSON data keys
+    # Advanced Q Search across main fields and nested JSON data keys
     if query:
         records = records.filter(
             Q(kobo_id__icontains=query) |
             Q(uuid__icontains=query) |
             Q(submitted_by__icontains=query) |
-            Q(data__patient_fname__icontains=query) |
-            Q(data__patient_mname__icontains=query) |
-            Q(data__patient_lname__icontains=query) |
-            Q(data__study_id__icontains=query) |
+            Q(data____contains={'section_1_0/patient_fname': query}) |
+            Q(data____contains={'section_1_0/patient_mname': query}) |
+            Q(data____contains={'section_1_0/patient_lname': query}) |
+            Q(data____contains={'section_1_0/study_id': query}) |
             Q(data__today__icontains=query) |
-            Q(data__enumerator__icontains=query)
+            Q(data____contains={'section_1_0/enumerator': query})
         )
 
     if project_filter:
@@ -87,7 +87,7 @@ def record_list(request):
 
     if enumerator_filter:
         records = records.filter(
-            Q(data__enumerator=enumerator_filter) | Q(submitted_by=enumerator_filter)
+            Q(**{'data__section_1_0/enumerator': enumerator_filter}) | Q(submitted_by=enumerator_filter)
         )
 
     # Date range filters on 'today' field inside Kobo data (string 'YYYY-MM-DD')
@@ -100,7 +100,7 @@ def record_list(request):
     all_records = _base_record_qs(request.user)
     enumerators = set()
     for r in all_records:
-        enum_val = r.data.get('enumerator') or r.submitted_by
+        enum_val = r.data.get('section_1_0/enumerator') or r.submitted_by
         if enum_val:
             enumerators.add(enum_val)
     enumerators = sorted(list(enumerators))
@@ -108,6 +108,9 @@ def record_list(request):
     # Projects for filter dropdown
     is_privileged = request.user.is_superuser or request.user.groups.filter(name='Admin').exists()
     projects = Project.objects.filter(is_active=True) if is_privileged else request.user.projects.filter(is_active=True)
+
+    # Store total count before paginating
+    total_count = records.count()
 
     # Pagination: 10 records per page
     paginator = Paginator(records, 10)
@@ -129,6 +132,7 @@ def record_list(request):
         'date_to': date_to,
         'projects': projects,
         'enumerators': enumerators,
+        'total_count': total_count,
         'title': 'Kobo Records',
     })
 
